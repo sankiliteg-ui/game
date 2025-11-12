@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ANNU — Tic Tac Toe (Funny Bestie Edition)</title>
+  <meta name="theme-color" content="#071427">
+  <style>
+    :root{
+      --bg:#071427; --card:#091827; --accent:#ffce4b; --muted:#94a3b8; --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 20% 10%, #0b2540 0%, #071427 40%, #04101a 100%);font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;color:#f0f7ff}
+    .wrap{width:980px;max-width:96%;display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start}
+    header{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin-bottom:6px}
+    .logo{width:78px;height:78px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ffd98a);display:flex;align-items:center;justify-content:center;font-weight:900;color:#08202a;font-size:26px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+    h1{font-size:24px;margin:0;letter-spacing:1px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));border-radius:12px;padding:16px;box-shadow:0 10px 40px rgba(2,6,23,0.7)}
+    .board-wrap{display:flex;flex-direction:column;gap:12px;align-items:center}
+    .board{width:320px;height:320px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .cell{background:var(--glass);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:900;cursor:pointer;user-select:none;transition:transform .12s ease, background .12s ease}
+    .cell:hover{transform:translateY(-6px)}
+    .cell.taken{cursor:default;transform:none;opacity:0.98}
+
+    .meta{display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;color:inherit;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#ffd98a);color:#07202a;border:0}
+    .mode{padding:8px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .status{font-size:15px;color:var(--muted)}
+    .scoreboard{display:flex;gap:10px}
+    .score{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);min-width:88px;text-align:center}
+    .small{font-size:12px;color:var(--muted)}
+    .footer{margin-top:10px;color:var(--muted);font-size:13px}
+    .win{background:linear-gradient(90deg, rgba(52,211,153,0.12), rgba(255,206,75,0.06));box-shadow:0 6px 18px rgba(2,6,23,0.35)}
+
+    /* funny badge */
+    .badge{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.03);font-weight:700}
+
+    /* confetti canvas sits above everything when active */
+    #confetti{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:999}
+
+    @media (max-width:420px) and (pointer:coarse) {
+      .wrap{grid-template-columns:1fr;gap:14px;padding:12px}
+      .logo{width:64px;height:64px;border-radius:12px;font-size:20px}
+      h1{font-size:20px}
+      .board{width:92vw;height:92vw;gap:8px}
+      .cell{font-size:10vw;border-radius:10px}
+      .cell:hover{transform:none}
+      .btn{padding:12px 14px;font-size:15px;border-radius:12px}
+      .mode label{font-size:14px}
+      .status{font-size:15px}
+    }
+    @media (max-width:820px){.wrap{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="wrap">
+    <header>
+      <div class="logo">ANNU</div>
+      <div>
+        <h1>ANNU — Tic Tac Toe ( Fun for noobde)</h1>
+        <p class="lead">A silly, personalized version just for your bestie <strong id="bestieNameDisplay">Annu</strong> — funny messages, confetti and goofy sounds!</p>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="board-wrap">
+        <div class="board" id="board" aria-label="Tic Tac Toe board"></div>
+
+        <div class="row" style="width:100%;justify-content:space-between;">
+          <div class="status" id="status">Ready to play — Your move, Annu 😎</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="undoBtn" title="Undo last move">Undo</button>
+            <button class="btn primary" id="resetBtn">New Game</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card meta">
+      <div class="row">
+        <div style="flex:1">
+          <div class="small">Bestie name</div>
+          <div class="mode">
+            <input id="bestieName" placeholder="Annu" style="padding:8px;border-radius:8px;width:100%;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"> 
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="flex:1">
+          <div class="small">You play as</div>
+          <div class="mode" id="playerChoice">
+            <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="humanSymbol" value="X" checked> X (goes first)</label>
+            <label style="display:flex;gap:8px;align-items:center;margin-left:12px"><input type="radio" name="humanSymbol" value="O"> O</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="flex-direction:column;gap:8px">
+        <div class="small">Scoreboard</div>
+        <div class="scoreboard">
+          <div class="score">
+            <div style="font-weight:700">You</div>
+            <div id="scoreYou">0</div>
+          </div>
+          <div class="score">
+            <div style="font-weight:700">ANNU WIN 😎</div>
+            <div id="scoreCPU">0</div>
+          </div>
+          <div class="score">
+            <div style="font-weight:700">Draws</div>
+            <div id="scoreD">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:6px;flex-direction:column;gap:6px">
+        <div class="small">Controls</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="hintBtn">Hint</button>
+          <button class="btn" id="swapBtn">Swap Sides</button>
+        </div>
+      </div>
+
+      <div class="footer">Tip: type your bestie's name above to personalize messages. Try the hint if Annu needs help 😂</div>
+    </aside>
+  </div>
+
+  <script>
+    // Personalized funny Tic Tac Toe
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('resetBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const hintBtn = document.getElementById('hintBtn');
+    const swapBtn = document.getElementById('swapBtn');
+    const scoreYou = document.getElementById('scoreYou');
+    const scoreCPU = document.getElementById('scoreCPU');
+    const scoreD = document.getElementById('scoreD');
+    const bestieNameInput = document.getElementById('bestieName');
+    const bestieNameDisplay = document.getElementById('bestieNameDisplay');
+
+    let cells = Array(9).fill('');
+    let history = [];
+    let human = 'X';
+    let cpu = 'O';
+    let currentPlayer = 'X';
+    let mode = 'cpu';
+    let scores = {You:0,CPU:0,D:0};
+    let gameOver = false;
+    let bestie = 'Annu';
+
+    const winningLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+    const funnyHumanWin = [
+      "Yay! ${name} crushed it — cupcakes for everyone! 🧁",
+      "Boss move, ${name}! They call you the Tic-Tac-Queen 👑",
+      "Legendary, ${name}. I'll never doubt you again (maybe). 😜"
+    ];
+    const funnyCpuWin = [
+      "Nooo ${name}! The robot stole your fries 🍟🤖",
+      "Computer wins. Blame the lag, ${name}! 😅",
+      "Don't cry ${name} — it's just binary. 0/1 feelings. 💔"
+    ];
+    const funnyDraw = [
+      "It's a tie — dramatic stare-off. 👀",
+      "Draw! Time for a rematch, same energy. 🔁",
+      "Nobody wins, but everyone's a champ (sort of). 🏆"
+    ];
+
+    // tiny WebAudio beeps for fun
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, duration=0.08){
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.value = 0.0001; o.start(); g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+      setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05); setTimeout(()=> o.stop(), 60); }, duration*1000);
+    }
+
+    function randomItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function renderBoard(){ boardEl.innerHTML=''; cells.forEach((v,i)=>{ const cell=document.createElement('div'); cell.className='cell'+(v?' taken':''); cell.setAttribute('data-index',i); cell.setAttribute('role','button'); cell.setAttribute('aria-label','Cell '+(i+1)); cell.textContent=v; cell.addEventListener('click', onCellClick); boardEl.appendChild(cell); }); }
+
+    function onCellClick(e){ const i = Number(e.currentTarget.dataset.index); if(gameOver || cells[i]) return; if(mode==='cpu' && currentPlayer !== human) return; makeMove(i, currentPlayer); if(!gameOver && mode==='cpu' && currentPlayer === cpu){ setTimeout(()=> cpuPlay(), 400); } }
+
+    function makeMove(i, player){ if(cells[i] || gameOver) return false; history.push(cells.slice()); cells[i]=player; animateCell(i); checkGameState(); renderBoard(); if(!gameOver) togglePlayer(); updateStatus(); beep(player==='X'?880:440, 0.09); return true; }
+
+    function animateCell(i){ const el = boardEl.querySelector(`[data-index="${i}"]`); if(!el) return; el.animate([{transform:'scale(0.85)'},{transform:'scale(1.03)'},{transform:'scale(1)'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'}); }
+    function togglePlayer(){ currentPlayer = currentPlayer === 'X' ? 'O' : 'X'; }
+    function updateStatus(msg){ if(msg) return statusEl.textContent = msg; if(gameOver) return; statusEl.textContent = mode==='cpu' ? (currentPlayer===human ? `Your turn, ${bestie} — make 'em laugh! 😂` : `Computer thinking... 🤖`) : `Player ${currentPlayer}'s turn`; }
+
+    function checkGameState(){ for(const line of winningLines){ const [a,b1,c] = line; if(cells[a] && cells[a]===cells[b1] && cells[a]===cells[c]){ gameOver=true; highlightWin(line); const winner = cells[a]; if(mode==='cpu'){ if(winner===human){ showFunnyWin('human'); scores.You++; } else { showFunnyWin('cpu'); scores.CPU++; } } else { statusEl.textContent = `Player ${winner} wins!`; } updateScores(); return; } } if(cells.every(c=>c)){ gameOver=true; showFunnyWin('draw'); scores.D++; updateScores(); } }
+
+    function highlightWin(line){ line.forEach(i=>{ const el = boardEl.querySelector(`[data-index="${i}"]`); if(el) el.classList.add('win'); }); }
+
+    function updateScores(){ scoreYou.textContent = scores.You; scoreCPU.textContent = scores.CPU; scoreD.textContent = scores.D; }
+
+    function resetBoard(){ cells=Array(9).fill(''); history=[]; gameOver=false; currentPlayer='X'; renderBoard(); updateStatus(); clearConfetti(); if(mode==='cpu' && cpu==='X') setTimeout(()=> cpuPlay(), 360); }
+
+    undoBtn.addEventListener('click', ()=>{ if(history.length===0 || gameOver) return; cells = history.pop(); gameOver=false; currentPlayer = currentPlayer === 'X' ? 'O' : 'X'; renderBoard(); updateStatus(); });
+    resetBtn.addEventListener('click', ()=> resetBoard());
+
+    document.querySelectorAll('input[name="humanSymbol"]').forEach(r=> r.addEventListener('change', e=>{ human = e.target.value; cpu = human === 'X' ? 'O' : 'X'; resetBoard(); }));
+
+    hintBtn.addEventListener('click', ()=>{ if(gameOver) return; const target = mode==='cpu'? human : currentPlayer; const best = findBestMove(cells, target); if(best.move!==null){ const el = boardEl.querySelector(`[data-index="${best.move}"]`); if(el){ el.classList.add('win'); setTimeout(()=> el.classList.remove('win'), 800); } statusEl.textContent = `Hint: Try cell ${best.move+1}, ${bestie}`; } });
+
+    swapBtn.addEventListener('click', ()=>{ if(mode!=='cpu') return; const prevHuman = human; human = cpu; cpu = prevHuman; cells = cells.map(c => c==='X'?'O':c==='O'?'X':''); const tmp = scores.You; scores.You = scores.CPU; scores.CPU = tmp; document.querySelectorAll('input[name="humanSymbol"]').forEach(r=>{ r.checked = (r.value===human); }); renderBoard(); updateScores(); updateStatus(); if(cpu==='X' && !gameOver) setTimeout(()=> cpuPlay(), 360); });
+
+    // bestie name personalization
+    bestieNameInput.value = bestie;
+    bestieNameInput.addEventListener('input', ()=>{ bestie = bestieNameInput.value.trim() || 'Annu'; bestieNameDisplay.textContent = bestie; updateStatus(); });
+
+    // show funny messages and confetti + sound
+    function showFunnyWin(kind){ let msg=''; if(kind==='human'){ msg = randomItem(funnyHumanWin).replace('${name}', bestie); statusEl.textContent = msg; runConfetti(); joyfulChime(); } else if(kind==='cpu'){ msg = randomItem(funnyCpuWin).replace('${name}', bestie); statusEl.textContent = msg; sadBoop(); } else { msg = randomItem(funnyDraw); statusEl.textContent = msg; smallConfetti(); }
+    }
+
+    // small audio cues
+    function joyfulChime(){ beep(1100,0.16); setTimeout(()=>beep(880,0.12),120); }
+    function sadBoop(){ beep(200,0.12); setTimeout(()=>beep(160,0.12),120); }
+
+    // CPU with Minimax
+    function cpuPlay(){ if(gameOver) return; if(currentPlayer !== cpu) return; const best = findBestMove(cells, cpu); if(best.move!==null) makeMove(best.move, cpu); }
+
+    function findBestMove(board, player){ const opponent = player==='X'?'O':'X'; function evaluate(bd){ for(const line of winningLines){ const [a,b1,c] = line; if(bd[a] && bd[a]===bd[b1] && bd[a]===bd[c]) return bd[a]===player?10:-10; } if(bd.every(x=>x)) return 0; return null; } function minimax(bd, depth, isMax){ const scoreNow = evaluate(bd); if(scoreNow !== null) return scoreNow; if(isMax){ let best = -Infinity; for(let i=0;i<9;i++) if(!bd[i]){ bd[i]=player; const val = minimax(bd, depth+1, false); bd[i]=''; best = Math.max(best,val); } return best - depth*0.01; } else { let best = Infinity; for(let i=0;i<9;i++) if(!bd[i]){ bd[i]=opponent; const val = minimax(bd, depth+1, true); bd[i]=''; best = Math.min(best, val); } return best + depth*0.01; } }
+      let bestVal=-Infinity, move=null; for(let i=0;i<9;i++){ if(!board[i]){ board[i]=player; const mv = minimax(board,0,false); board[i]=''; if(mv>bestVal){ bestVal=mv; move=i; } } } return {score:bestVal, move}; }
+
+    // Confetti (lightweight) — draws particles on #confetti canvas
+    const confettiCanvas = document.getElementById('confetti'); const confettiCtx = confettiCanvas.getContext('2d'); let confettiPieces=[]; function resizeConfetti(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; } window.addEventListener('resize', resizeConfetti); resizeConfetti();
+    function runConfetti(){ createConfetti(120); }
+    function smallConfetti(){ createConfetti(40); }
+    function createConfetti(n){ confettiPieces = []; for(let i=0;i<n;i++){ confettiPieces.push({x:Math.random()*confettiCanvas.width, y:Math.random()*confettiCanvas.height/2, r:Math.random()*6+4, dx:(Math.random()-0.5)*6, dy:Math.random()*4+2, color:`hsl(${Math.random()*60+200},80%,60%)`, tilt:Math.random()*0.4-0.2}); } if(!confettiAnim) confettiAnim = requestAnimationFrame(confettiLoop); }
+    let confettiAnim = null;
+    function confettiLoop(){ confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); for(const p of confettiPieces){ p.x += p.dx; p.y += p.dy; p.tilt += 0.02; confettiCtx.save(); confettiCtx.translate(p.x,p.y); confettiCtx.rotate(p.tilt); confettiCtx.fillStyle = p.color; confettiCtx.fillRect(-p.r/2, -p.r/2, p.r, p.r*0.6); confettiCtx.restore(); } confettiPieces = confettiPieces.filter(p=>p.y < confettiCanvas.height + 30); if(confettiPieces.length>0) confettiAnim = requestAnimationFrame(confettiLoop); else { cancelAnimationFrame(confettiAnim); confettiAnim = null; confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); } }
+    function clearConfetti(){ confettiPieces=[]; if(confettiAnim){ cancelAnimationFrame(confettiAnim); confettiAnim=null; confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); } }
+
+    // init
+    renderBoard(); updateStatus(); updateScores();
+    if(cpu==='X') setTimeout(()=> cpuPlay(),360);
+    window.addEventListener('keydown', (e)=>{ if(document.activeElement && document.activeElement.tagName==='INPUT') return; const key=e.key; if(key>='1' && key<='9'){ const idx=Number(key)-1; if(!gameOver){ if(mode==='cpu' && currentPlayer!==human) return; makeMove(idx,currentPlayer); if(!gameOver && mode==='cpu' && currentPlayer===cpu) setTimeout(()=> cpuPlay(),360); } } });
+  </script>
+</body>
+</html>
